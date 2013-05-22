@@ -44,11 +44,15 @@ void testApp::setup() {
     // nice values for negative are 97.0/76.7
     gui->addWidgetDown(new ofxUISlider(304,16,-100.0,100.0,-1.85,"Brightness"));
     gui->addWidgetDown(new ofxUISlider(304,16,-100.0,100.0,0.0,"Contrast"));
+    gui->addWidgetDown(new ofxUISlider(304,16,-100.0,200.0,0.0,"Min"));
+    gui->addWidgetDown(new ofxUISlider(304,16,-100.0,200.0,0.0,"Max"));
     gui->addWidgetDown(new ofxUIDropDownList("Blendmode", blendmodes, 304));
     ofAddListener(gui->newGUIEvent, this, &testApp::guiEvent);
     gui->addWidgetDown(new ofxUILabel("Press [SPACE] to clear the canvas", OFX_UI_FONT_SMALL));
     gui->addWidgetDown(new ofxUILabel("Press [TAB] to toggle UI on/off", OFX_UI_FONT_SMALL));
     //    gui->loadSettings("GUI/guiSettings.xml");
+    
+    source = &maskImg;
 }
 
 //--------------------------------------------------------------
@@ -95,17 +99,17 @@ void testApp::update(){
         
         // apply current brightness setting (darken image in second buffer)
         rgb2 -= ((ofxUISlider*)gui->getWidget("Dimmer"))->getScaledValue();
-
-        // create mask image copy of darkened image (auto-converts to grayscale)
+        rgb2.convertToRange(((ofxUISlider*)gui->getWidget("Min"))->getScaledValue(),((ofxUISlider*)gui->getWidget("Max"))->getScaledValue());
+        
+        // create a grayscale version of darkened image (auto-converts to grayscale)
         maskImg = rgb2;
-        if(brightness >= 0 || contrast >= 0) maskImg.brightnessContrast(((ofxUISlider*)gui->getWidget("Brightness"))->getScaledValue(), ((ofxUISlider*)gui->getWidget("Contrast"))->getScaledValue());
+        maskImg.brightnessContrast(((ofxUISlider*)gui->getWidget("Brightness"))->getScaledValue(), ((ofxUISlider*)gui->getWidget("Contrast"))->getScaledValue());
 
         // draw to framebuffer, not to the screen
         fbo.begin();
             ofEnableBlendMode(getSelectedBlendMode());
-
 //            maskImg.invert();
-            maskImg.draw(0,0);
+            source->draw(0,0);
         fbo.end();
     }
 }
@@ -118,6 +122,17 @@ void testApp::draw(){
     rgb2.draw(camW,0);
     maskImg.draw(0, camH);
     fbo.draw(camW, camH);
+    
+    if(gui->isVisible()){
+        ofPushStyle();
+            ofNoFill();
+            ofSetHexColor(0xFF0000);
+            if(source == &rgb2)
+                ofRect(camW, 0, camW, camH);
+            else
+                ofRect(0, camH, camW, camH);
+        ofPopStyle();
+    }
 }
 
 //--------------------------------------------------------------
@@ -168,7 +183,13 @@ void testApp::mouseDragged(int x, int y, int button){
 
 //--------------------------------------------------------------
 void testApp::mouseReleased(int x, int y, int button){
-
+    if(x >= camW && x < camW*2 && y < camH){
+        source = &rgb2;
+    }
+    
+    if(x < camW && y >= camH && y < camH*2){
+        source = &maskImg;
+    }
 }
 
 //--------------------------------------------------------------
@@ -200,18 +221,6 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 //    {
 //        ofxUISlider *slider = (ofxUISlider *) e.widget;
 //        dimmer = slider->getScaledValue();
-//    }
-//
-//    if(e.widget->getName() == "Brightness")
-//    {
-//        ofxUISlider *slider = (ofxUISlider *) e.widget;
-//        brightness = slider->getScaledValue();
-//    }
-//    
-//    if(e.widget->getName() == "Contrast")
-//    {
-//        ofxUISlider *slider = (ofxUISlider *) e.widget;
-//        contrast = slider->getScaledValue();
 //    }
 }
 

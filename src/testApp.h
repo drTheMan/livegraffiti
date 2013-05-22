@@ -35,17 +35,14 @@ class testApp : public ofBaseApp{
         // image objects; "normal" webcam image, manipulated webcam image and grayscale (mask) image
         ofxCvColorImage rgb, rgb2;
         ofxCvGrayscaleImage maskImg;
+        ofxCvImage* source;
 
         // screenbuffer
         ofFbo fbo;
 
         // webcam image dimensions
         int camW,camH;
-    
-
-        // manipulation parameters
-        float dimmer, brightness, contrast;
-    
+        
         // UI-stuff
         bool bDrawUI;
         ofxUICanvas *gui;
