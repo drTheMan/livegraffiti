@@ -10,9 +10,6 @@ void testApp::setup() {
     camH = 240;
     winW = camW*2;
     winH = camH*2;
-    dimmer = 0.0;
-    brightness = 97.0;
-    contrast = 76.7;
 
     ofSetWindowShape(winW, winH);
 
@@ -34,12 +31,24 @@ void testApp::setup() {
     bDrawUI = true;
     gui = new ofxUICanvas(0,0,winW,winH);		//ofxUICanvas(float x, float y, float width, float height)
 
+    
+    vector<string> blendmodes;
+    blendmodes.push_back("Alpha");
+    blendmodes.push_back("Add");
+    blendmodes.push_back("Multiply");
+    blendmodes.push_back("Subtract");
+    blendmodes.push_back("Screen");
+    
     gui->addWidgetDown(new ofxUILabel("LiveGraffiti", OFX_UI_FONT_LARGE));
-    gui->addWidgetDown(new ofxUISlider(304,16,-100.0,100.0,dimmer,"Dimmer"));
-    gui->addWidgetDown(new ofxUISlider(304,16,-100.0,100.0,brightness,"Brightness"));
-    gui->addWidgetDown(new ofxUISlider(304,16,-100.0,100.0,contrast,"Contrast"));
+    gui->addWidgetDown(new ofxUISlider(304,16,-100.0,100.0,0.0,"Dimmer"));
+    // nice values for negative are 97.0/76.7
+    gui->addWidgetDown(new ofxUISlider(304,16,-100.0,100.0,-1.85,"Brightness"));
+    gui->addWidgetDown(new ofxUISlider(304,16,-100.0,100.0,0.0,"Contrast"));
+    gui->addWidgetDown(new ofxUIDropDownList("Blendmode", blendmodes, 304));
     ofAddListener(gui->newGUIEvent, this, &testApp::guiEvent);
-//    gui->loadSettings("GUI/guiSettings.xml");
+    gui->addWidgetDown(new ofxUILabel("Press [SPACE] to clear the canvas", OFX_UI_FONT_SMALL));
+    gui->addWidgetDown(new ofxUILabel("Press [TAB] to toggle UI on/off", OFX_UI_FONT_SMALL));
+    //    gui->loadSettings("GUI/guiSettings.xml");
 }
 
 //--------------------------------------------------------------
@@ -48,6 +57,26 @@ void testApp::resetDrawing(){
     fbo.begin();
         ofBackground(0,0,0);
     fbo.end();
+}
+
+ofBlendMode testApp::getSelectedBlendMode(){
+//    ofxUIDropDownList *ddlist = (ofxUIDropDownList *) gui->getWidget("Blendmode");
+//    vector<ofxUIWidget *> &selected = ddlist->getSelected();
+//    for(int i = 0; i < selected.size(); i++)
+//    {
+//        cout << "SELECTED: " << selected[i]->getName() << endl;
+//    }
+
+    vector<ofxUIWidget *> &selected = ((ofxUIDropDownList*)gui->getWidget("Blendmode"))->getSelected();
+    string value = selected.size() == 1 ? selected[0]->getName() : "";
+
+    if(value == "Alpha") return OF_BLENDMODE_ALPHA;
+    if(value == "Add") return OF_BLENDMODE_ADD;
+    if(value == "Multiply") return OF_BLENDMODE_MULTIPLY;
+    if(value == "Subtract") return OF_BLENDMODE_SUBTRACT;
+//    if(value == "Screen") return OF_BLENDMODE_SCREEN;
+    // default
+    return OF_BLENDMODE_SCREEN;
 }
 
 void testApp::update(){
@@ -65,15 +94,16 @@ void testApp::update(){
         rgb2 = rgb;
         
         // apply current brightness setting (darken image in second buffer)
-        rgb2 -= dimmer;
+        rgb2 -= ((ofxUISlider*)gui->getWidget("Dimmer"))->getScaledValue();
 
         // create mask image copy of darkened image (auto-converts to grayscale)
         maskImg = rgb2;
-        if(brightness >= 0 || contrast >= 0) maskImg.brightnessContrast(brightness, contrast);
+        if(brightness >= 0 || contrast >= 0) maskImg.brightnessContrast(((ofxUISlider*)gui->getWidget("Brightness"))->getScaledValue(), ((ofxUISlider*)gui->getWidget("Contrast"))->getScaledValue());
 
         // draw to framebuffer, not to the screen
         fbo.begin();
-            ofEnableBlendMode(OF_BLENDMODE_ADD);
+            ofEnableBlendMode(getSelectedBlendMode());
+
 //            maskImg.invert();
             maskImg.draw(0,0);
         fbo.end();
@@ -90,20 +120,10 @@ void testApp::draw(){
     fbo.draw(camW, camH);
 }
 
-//void testApp::drawInfo(){
-//    ofPushStyle();
-//    ofSetHexColor(0xFF0000);
-//    ofDrawBitmapString("dimmer: " + ofToString(dimmer), 10, 10);
-//    ofDrawBitmapString("brightness: " + ofToString(brightness), 10, 30);
-//    ofDrawBitmapString("contrast: " + ofToString(contrast), 10, 50);
-//    ofPopStyle();
-//}
-
 //--------------------------------------------------------------
 void testApp::mousePressed(int x, int y, int button) {
 
 }
-
 
 //--------------------------------------------------------------
 void testApp::keyPressed  (int key){ 
@@ -122,19 +142,13 @@ void testApp::keyPressed  (int key){
         resetDrawing();
     }
 
-    if (key == OF_KEY_UP){
-        if(dimmer >= 5)
-            dimmer -= 5;
-    }
-
-    float step = 0.1;
-    if (key == OF_KEY_UP && dimmer >= step){ dimmer -= step; ((ofxUISlider*)gui->getWidget("Dimmer"))->setValue(dimmer); }
-    if (key == OF_KEY_DOWN && dimmer <= 255-step){ dimmer += step; ((ofxUISlider*)gui->getWidget("Dimmer"))->setValue(dimmer); }
-    if(key == '\\' && brightness >= step) {brightness -= step;     ((ofxUISlider*)gui->getWidget("Brightness"))->setValue(brightness); }
-    if(key == ']' && brightness <= 255-step){ brightness += step;      ((ofxUISlider*)gui->getWidget("Brightness"))->setValue(brightness); }
-    if(key == '\'' && contrast >= step) {contrast -= step;      ((ofxUISlider*)gui->getWidget("Contrast"))->setValue(contrast); }
-    if(key == '[' && contrast <= 255-step){ contrast += step;     ((ofxUISlider*)gui->getWidget("Contrast"))->setValue(contrast); }
-	
+    float step = 0.05;
+    if (key == OF_KEY_UP){ ((ofxUISlider*)gui->getWidget("Dimmer"))->setValue(((ofxUISlider*)gui->getWidget("Dimmer"))->getScaledValue()+step);}
+    if (key == OF_KEY_DOWN){ ((ofxUISlider*)gui->getWidget("Dimmer"))->setValue(((ofxUISlider*)gui->getWidget("Dimmer"))->getScaledValue()-step);}
+    if (key == '['){ ((ofxUISlider*)gui->getWidget("Brightness"))->setValue(((ofxUISlider*)gui->getWidget("Brightness"))->getScaledValue()+step);}
+    if (key == '\''){ ((ofxUISlider*)gui->getWidget("Brightness"))->setValue(((ofxUISlider*)gui->getWidget("Brightness"))->getScaledValue()-step);}
+    if (key == ']'){ ((ofxUISlider*)gui->getWidget("Contrast"))->setValue(((ofxUISlider*)gui->getWidget("Contrast"))->getScaledValue()+step);}
+    if (key == '\\'){ ((ofxUISlider*)gui->getWidget("Contrast"))->setValue(((ofxUISlider*)gui->getWidget("Contrast"))->getScaledValue()-step);}
     if(key == '\t') gui->toggleVisible();
 }
 
@@ -182,22 +196,22 @@ void testApp::exit()
 
 void testApp::guiEvent(ofxUIEventArgs &e)
 {
-    if(e.widget->getName() == "Dimmer")
-    {
-        ofxUISlider *slider = (ofxUISlider *) e.widget;
-        dimmer = slider->getScaledValue();
-    }
-
-    if(e.widget->getName() == "Brightness")
-    {
-        ofxUISlider *slider = (ofxUISlider *) e.widget;
-        brightness = slider->getScaledValue();
-    }
-    
-    if(e.widget->getName() == "Contrast")
-    {
-        ofxUISlider *slider = (ofxUISlider *) e.widget;
-        contrast = slider->getScaledValue();
-    }
+//    if(e.widget->getName() == "Dimmer")
+//    {
+//        ofxUISlider *slider = (ofxUISlider *) e.widget;
+//        dimmer = slider->getScaledValue();
+//    }
+//
+//    if(e.widget->getName() == "Brightness")
+//    {
+//        ofxUISlider *slider = (ofxUISlider *) e.widget;
+//        brightness = slider->getScaledValue();
+//    }
+//    
+//    if(e.widget->getName() == "Contrast")
+//    {
+//        ofxUISlider *slider = (ofxUISlider *) e.widget;
+//        contrast = slider->getScaledValue();
+//    }
 }
 

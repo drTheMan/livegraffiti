@@ -15,6 +15,7 @@ class testApp : public ofBaseApp{
 
         // helper methods
         void resetDrawing();
+        ofBlendMode getSelectedBlendMode();
 
         // event-handlers
 		void keyPressed(int key);
