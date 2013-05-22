@@ -2,18 +2,21 @@
 
 #include "ofMain.h"
 #include "ofxOpenCv.h"
+#include "ofxUI.h"
 
 class testApp : public ofBaseApp{
 	
 	public:
 		
+        // OF-basics
 		void setup();
 		void update();
 		void draw();
-    
+
+        // helper methods
         void resetDrawing();
-        void drawShade();
-		
+
+        // event-handlers
 		void keyPressed(int key);
 		void keyReleased(int key);
 		void mouseMoved(int x, int y );
@@ -23,26 +26,29 @@ class testApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
-		
 
-    
+
+        // camera video grabber
         ofVideoGrabber grabber;
-        
-        ofxCvColorImage rgb,hsb;
-        ofxCvGrayscaleImage hue,sat,bri,filtered;
-        ofxCvContourFinder contours;
-    
-        ofxCvColorImage rgb2;
+
+        // image objects; "normal" webcam image, manipulated webcam image and grayscale (mask) image
+        ofxCvColorImage rgb, rgb2;
         ofxCvGrayscaleImage maskImg;
 
-        ofImage mask;
-        ofImage topLayer;
-        ofImage bottomLayer;
-        ofShader maskShader;
-    
+        // screenbuffer
         ofFbo fbo;
+
+        // webcam image dimensions
+        int camW,camH;
     
-        int w,h;
-        int brightness;
+
+        // manipulation parameters
+        float dimmer, brightness, contrast;
     
+        // UI-stuff
+        bool bDrawUI;
+        ofxUICanvas *gui;
+
+        void exit();
+        void guiEvent(ofxUIEventArgs &e);
 };
